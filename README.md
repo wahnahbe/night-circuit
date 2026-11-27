@@ -4,15 +4,30 @@ A theme for the Claude desktop app with a neon night-city look: blue-black
 panels, a hazard-yellow accent, cyan-edged boxes, and an animated frame around
 the conversation (a red rail by the sidebar, a yellow rail by the right panel,
 running lights, marching hazard bars, a scan line, and a brief screen glitch
-every nine seconds). Dark mode only. The palette and artwork are original.
+every fifty seconds). Dark mode only. The palette and artwork are original.
 
-It is a Claude Code mod: one hooks module that sets the app's colors and draws
-the backdrop.
+It is a Claude Code plugin: one hooks module that sets the app's colors and
+draws the backdrop.
 
 ## Install
 
-The theme is loaded from wherever this folder lives, so put it somewhere
-permanent first.
+At the prompt of a Claude Code session, type:
+
+```
+/plugin install night-circuit --marketplace wahnahbe/night-circuit
+```
+
+Answer `y` to add the marketplace, then pick a scope (user, for every
+project). Start a new session in the desktop app to see the theme. Turn it on
+or off from the plugin list like any other plugin.
+
+On Claude Code 2.1.321 and 2.1.322 the app refuses the backdrop, so the theme
+sets its colors alone there. Update Claude Code for the animated frame.
+
+### Running it from a folder (for editing)
+
+To work on the theme, load it straight from a clone instead. The theme is
+loaded from wherever this folder lives, so put it somewhere permanent first.
 
 **Windows** (PowerShell):
 
@@ -38,16 +53,19 @@ settings.
 
 ## Update
 
-    git -C ~/.claude/mods/night-circuit pull
+Installed as a plugin: `/plugin update night-circuit`, then `/reload-plugins`.
 
-(Windows: `git -C "$env:USERPROFILE\.claude\mods\night-circuit" pull`.) The
+From a folder: `git -C ~/.claude/mods/night-circuit pull`
+(Windows: `git -C "$env:USERPROFILE\.claude\mods\night-circuit" pull`). The
 app picks the change up by itself; restart it if it does not.
 
 ## Remove
 
-Delete the `CLAUDE_CODE_PLUGIN_DIRS` and `CLAUDE_CODE_PLUGIN_DIR_WATCH` lines
-from the `env` block of `settings.json` (or restore the backup), restart
-Claude, then delete this folder.
+Installed as a plugin: `/plugin uninstall night-circuit`.
+
+From a folder: delete the `CLAUDE_CODE_PLUGIN_DIRS` and
+`CLAUDE_CODE_PLUGIN_DIR_WATCH` lines from the `env` block of `settings.json`
+(or restore the backup), restart Claude, then delete this folder.
 
 ## If the backdrop shows but does not move
 

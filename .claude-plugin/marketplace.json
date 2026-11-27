@@ -1,0 +1,12 @@
+{
+  "name": "night-circuit",
+  "owner": { "name": "wahnahbe" },
+  "description": "Night Circuit, a neon night-city theme for the Claude desktop app.",
+  "plugins": [
+    {
+      "name": "night-circuit",
+      "source": "./",
+      "description": "A neon night-city look for the Claude desktop app: near-black panels, hazard-yellow accent, cyan and red signal colors, and an animated HUD backdrop."
+    }
+  ]
+}

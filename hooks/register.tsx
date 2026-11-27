@@ -1,4 +1,4 @@
-import type { Register, ThemeSetArgs } from 'claude-code'
+import type { Register, ThemeResult, ThemeSetArgs } from 'claude-code'
 
 import { makeColors } from './make-colors.js'
 
@@ -170,7 +170,7 @@ const rightArt = `${RIGHT} scale(${-UNIT},${UNIT})`
 // What moves: a light runs along each bracket and drops down each rail, the
 // hazard bars march, the small lights blink in turn, a pointer slides along
 // each ruler, the brackets glitch now and then, the glows breathe, and a scan
-// line sweeps down. Every nine seconds the whole screen glitches for a third
+// line sweeps down. Every fifty seconds the whole screen glitches for a third
 // of a second: the frame jolts sideways and thin colored bands tear across,
 // each band lighting once so no spot flickers.
 //
@@ -180,16 +180,16 @@ const rightArt = `${RIGHT} scale(${-UNIT},${UNIT})`
 // frame.
 const SCENE = `<svg xmlns="http://www.w3.org/2000/svg">
 <style>
-.jolt{animation:jolt 9s steps(1,end) infinite}
-@keyframes jolt{0%,100%{transform:translate(0,0)}62%{transform:translate(-9px,0)}63.2%{transform:translate(7px,1px)}64.4%{transform:translate(-4px,0)}65.6%{transform:translate(0,0)}}
-.tear{opacity:0;animation:tearA 9s steps(1,end) infinite}
+.jolt{animation:jolt 50s steps(1,end) infinite}
+@keyframes jolt{0%,100%{transform:translate(0,0)}62%{transform:translate(-9px,0)}62.216%{transform:translate(7px,1px)}62.432%{transform:translate(-4px,0)}62.648%{transform:translate(0,0)}}
+.tear{opacity:0;animation:tearA 50s steps(1,end) infinite}
 .tear.b{animation-name:tearB}
 .tear.c{animation-name:tearC}
-@keyframes tearA{0%,100%{opacity:0}62%{opacity:.5}63.2%{opacity:0}}
-@keyframes tearB{0%,100%{opacity:0}63.2%{opacity:.45}64.4%{opacity:0}}
-@keyframes tearC{0%,100%{opacity:0}64.4%{opacity:.4}65.6%{opacity:0}}
-.flash{opacity:0;animation:flash 9s steps(1,end) infinite}
-@keyframes flash{0%,100%{opacity:0}62%{opacity:.05}63.2%{opacity:0}}
+@keyframes tearA{0%,100%{opacity:0}62%{opacity:.5}62.216%{opacity:0}}
+@keyframes tearB{0%,100%{opacity:0}62.216%{opacity:.45}62.432%{opacity:0}}
+@keyframes tearC{0%,100%{opacity:0}62.432%{opacity:.4}62.648%{opacity:0}}
+.flash{opacity:0;animation:flash 50s steps(1,end) infinite}
+@keyframes flash{0%,100%{opacity:0}62%{opacity:.05}62.216%{opacity:0}}
 .run{animation:run 3.5s linear infinite}
 .run.b{animation-duration:4.4s}
 @keyframes run{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
@@ -202,12 +202,12 @@ const SCENE = `<svg xmlns="http://www.w3.org/2000/svg">
 .pulse{animation:pulse 1.8s ease-in-out infinite}
 .pulse.d1{animation-delay:.3s}.pulse.d2{animation-delay:.6s}.pulse.d3{animation-delay:.9s}.pulse.d4{animation-delay:1.2s}
 @keyframes pulse{0%,100%{opacity:.2}35%{opacity:1}70%{opacity:.2}}
-.ghost{opacity:0;animation:ghost 7s steps(1,end) infinite}
+.ghost{opacity:0;animation:ghost 50s steps(1,end) infinite}
 .ghost.b{animation-delay:3.2s}
-@keyframes ghost{0%,100%{opacity:0}90%{opacity:.75;transform:translate(-5px,0)}92%{opacity:0}}
-.wedge{animation:wedge 7s steps(1,end) infinite}
+@keyframes ghost{0%,100%{opacity:0}90%{opacity:.75;transform:translate(-5px,0)}90.28%{opacity:0}}
+.wedge{animation:wedge 50s steps(1,end) infinite}
 .wedge.b{animation-delay:3.2s}
-@keyframes wedge{0%,100%{opacity:1}90%{opacity:.5}92%{opacity:1}}
+@keyframes wedge{0%,100%{opacity:1}90%{opacity:.5}90.28%{opacity:1}}
 .breathe{animation:breathe 7s ease-in-out infinite}
 .breathe.b{animation-duration:9s}
 @keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
@@ -260,7 +260,17 @@ export const register: Register = on => {
     if (unpainted !== undefined) {
       $.ui.toast(unpainted)
     }
-    const set = await $.theme.set(LOOK)
+    // Claude Code 2.1.321 and 2.1.322 throw on any backdrop ("id is 1 to 64 of
+    // letters, digits, _ or - (host check)"), which threw away the colors too.
+    // On a throw, set the colors alone so those builds still get the palette.
+    let set: ThemeResult
+
+    try {
+      set = await $.theme.set(LOOK)
+    } catch (err) {
+      set = await $.theme.set({ colors: LOOK.colors })
+      $.ui.log(`Night Circuit: backdrop refused (${err instanceof Error ? err.message : String(err)}); colors only.`)
+    }
 
     if (!set.isDrawn) {
       $.ui.status(set.reason)
