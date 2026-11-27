@@ -1,13 +1,17 @@
 # Night Circuit
 
-A theme for the Claude desktop app with a neon night-city look: blue-black
-panels, a hazard-yellow accent, cyan-edged boxes, and an animated frame around
-the conversation (a red rail by the sidebar, a yellow rail by the right panel,
-running lights, marching hazard bars, a scan line, and a brief screen glitch
-every fifty seconds). Dark mode only. The palette and artwork are original.
+A theme for the Claude desktop app with a neon night-city look: an animated
+frame around the conversation, behind the app's frosted panels (a red rail by
+the sidebar, a yellow rail by the right panel, corner brackets, running
+lights, marching hazard bars, a scan line, and a brief screen glitch every
+fifty seconds). The artwork is original.
 
-It is a Claude Code plugin: one hooks module that sets the app's colors and
-draws the backdrop.
+It is a Claude Code plugin: one hooks module that draws the backdrop.
+
+The theme sends a backdrop only and leaves the app's own colors alone. The
+desktop app (as of November 2026) paints a theme's own palette as solid
+panels over its backdrop, which hid the frame completely, so the earlier
+blue-black palette was dropped.
 
 ## Install
 
@@ -21,8 +25,6 @@ Answer `y` to add the marketplace, then pick a scope (user, for every
 project). Start a new session in the desktop app to see the theme. Turn it on
 or off from the plugin list like any other plugin.
 
-On Claude Code 2.1.321 and 2.1.322 the app refuses the backdrop, so the theme
-sets its colors alone there. Update Claude Code for the animated frame.
 
 ### Running it from a folder (for editing)
 
@@ -83,15 +85,15 @@ The app decides whether a backdrop may animate. Check, in this order:
 ## Layout
 
 The frame is positioned for the app with the sidebar and the right panel both
-open (`SIDEBAR_PX` and `RIGHT_PANEL_PX` at the top of the scene code in
-`hooks/register.tsx`). Those panels sit on top of the backdrop, so anything
+open (`LEFT_X` and `RIGHT_X`, in viewBox units, at the top of the scene code
+in `hooks/register.tsx`). Those panels sit on top of the backdrop, so anything
 drawn under them is hidden. With the sidebar collapsed, the left rail sits
 behind the edge of the text.
 
 ## Changing it
 
-Everything is in `hooks/register.tsx`: the palette at the top (`makeColors`),
-then the backdrop, built as one SVG string.
+Everything is in `hooks/register.tsx`: the backdrop, built as one SVG string,
+and the hooks that set and draw it.
 
 Rules the desktop app enforces on a custom backdrop, as of November 2026. The
 comment at the top of the scene code has the detail.
@@ -99,9 +101,11 @@ comment at the top of the scene code has the detail.
 - No `@media` rules except `prefers-reduced-motion` and `prefers-color-scheme`.
   Window-size rules (`min-width`, `aspect-ratio`) make the app refuse to
   animate the drawing at all.
-- No `viewBox` tricks needed: one unit is one pixel, and the drawing is given
-  the window's size. Hang things from the right or bottom edge with a nested
-  `<svg x="100%" y="100%" overflow="visible">`.
+- One root `<svg>` with a `viewBox`, `width` and `height` of 100% and
+  `preserveAspectRatio="xMidYMid slice"`, like Anthropic's theme-examples
+  scenes. No nested `<svg>`, no `overflow`, and no SMIL `<animate>`: animate
+  with CSS in the scene's own `<style>`. A scene built the other way was not
+  drawn at all.
 - Plain SVG shapes, gradients, patterns, clip paths, text and `<style>` only.
   No viewport units, backslashes, external or `data:` urls, `shape-rendering`
   or `vector-effect`.
@@ -109,5 +113,5 @@ comment at the top of the scene code has the detail.
   changes brightness four times within a second over a noticeable area, or
   one that takes more than about 5 ms a frame to draw.
 
-`hooks/make-colors.js` and `hooks/make-colors.d.ts` are the color helper that
-ships with Claude Code's mod tooling, copied in unchanged.
+`hooks/backdrop.test.tsx` checks that the scene renders; run it with
+`claude plugin test .`.

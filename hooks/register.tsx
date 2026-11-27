@@ -1,85 +1,40 @@
-import type { Register, ThemeResult, ThemeSetArgs } from 'claude-code'
+import type { Register, ThemeSetArgs } from 'claude-code'
 
-import { makeColors } from './make-colors.js'
-
-// Night Circuit: a neon night-city look. Blue-black panels, a hazard-yellow
-// accent, and cyan / red / green / amber as signal colors. Dark only: the idea
-// is a city at night, so there is no daytime half.
+// Night Circuit: a neon night-city frame behind the chat in the Claude desktop
+// app. The theme sends a backdrop only, with no palette: the desktop app (as
+// of Nov 27 2026) paints a theme's own colors as solid panels over its
+// backdrop, so a palette hides the frame entirely. Anthropic's own
+// theme-examples send a backdrop alone too. The app keeps its own colors and
+// frosts its panels over the frame.
 const YELLOW = '#f7e600'
 const CYAN = '#16d6f0'
 const RED = '#ff2d55'
-const GREEN = '#22e08f'
-const AMBER = '#ff9d1c'
 const MAGENTA = '#e389ff'
-const EDGE = '#7df3ff'
 
 const SCENE_NAME = 'night-circuit'
 
-const { theme, problems } = makeColors({
-  label: 'Night Circuit',
-  only: 'dark',
-  contrast: 'more',
-  // Code is colored from these: keywords yellow, strings green, literals cyan,
-  // names red, variables amber.
-  roles: { accent: YELLOW, danger: RED, success: GREEN, warning: AMBER, pro: CYAN },
-  dark: {
-    gray: {
-      anchors: {
-        'surface-0': '#090a10',
-        // Boxes: cards, panels and menus are a deep navy, a step apart from
-        // the blue-black page, so each reads as a lit panel.
-        'surface-1': '#0c1120',
-        'surface-2': '#101829',
-        'surface-3': '#141d31',
-        'text-primary': '#e9f6f4',
-        'text-secondary': '#b4cbcd',
-        'text-muted': '#8aa3a8',
-      },
-      // Every border, focus ring and track is this color at low opacity, so
-      // the edge of each box is a cyan line instead of a gray one.
-      stops: { 0: EDGE },
-    },
-    git: {
-      added: GREEN,
-      removed: RED,
-      modified: CYAN,
-      merged: MAGENTA,
-      closed: '#ff6b86',
-      conflicting: AMBER,
-      draft: '#8aa3a8',
-    },
-  },
-})
-
-// HOW THE DESKTOP APP DRAWS A BACKDROP (read from its live code, Nov 2026).
+// HOW THE DESKTOP APP DRAWS A BACKDROP (Nov 2026).
 //
-// Only a short allowlist of built-in scenes may animate inside the frame.
-// Every other scene is drawn STILL there (the app removes every animation and
-// SMIL element), and its motion is played by the app's own player: the same
-// markup shown as an image, given the window's width and height. The player
-// takes a drawing only if:
-//   - it is well-formed XML made of plain SVG shapes, gradients, patterns,
-//     clip paths, text and <style>;
-//   - its CSS has no @media rule other than prefers-reduced-motion or
-//     prefers-color-scheme. Window-size rules (min-width, aspect-ratio) get
-//     the whole drawing refused, and it then never moves;
-//   - it has no viewport units, backslashes, external urls, or the
-//     shape-rendering / vector-effect properties.
-// While it plays, the app samples it every frame and stops it for good if it
-// flashes (a pixel changing brightness four times within a second, over a
-// quarter of a 341 x 256 pixel area) or costs more than 5.5 ms a frame.
+// The scene follows the shape of Anthropic's theme-examples scenes: one root
+// <svg> with a viewBox, width and height 100% and preserveAspectRatio
+// "slice", animated with CSS only, with no nested <svg>, no overflow and no
+// SMIL <animate>. An earlier version without those was not drawn at all.
+// Custom scenes are played as an image by the app's own player, which also
+// refuses @media rules other than prefers-reduced-motion and
+// prefers-color-scheme, viewport units, backslashes, external urls and the
+// shape-rendering / vector-effect properties. It stops a scene for good if it
+// flashes or costs more than about 5.5 ms a frame.
 //
-// So this drawing has no viewBox and no size rules. One unit is one pixel, and
-// everything hangs from the window's edges through nested <svg> elements
-// placed with percentages: x="100%" is the right edge, y="100%" the bottom.
-//
-// The sidebar and the right panel sit on top of the backdrop, so the frame is
-// drawn around the middle column: a red side just right of the sidebar, a
-// yellow side just left of the right panel.
-const SIDEBAR_PX = 288
-const RIGHT_PANEL_PX = 313
-// The frame's parts are drawn in art units; this is how many pixels one is.
-const UNIT = 1.85
+// The viewBox is 1700 x 900, close to a desktop window's shape, so "slice"
+// crops little. The sidebar and the right panel sit on top of the backdrop,
+// so the frame is drawn around the middle column: a red side just right of
+// the sidebar, a yellow side just left of the right panel.
+const W = 1700
+const H = 900
+const LEFT_X = 252
+const RIGHT_X = 1416
+// The frame's parts are drawn in art units; this is how many viewBox units one is.
+const UNIT = 1.65
 
 // One corner bracket of the frame: a thick chamfered wedge, its cyan glitch
 // ghost, a thin inner line and the light that runs along it. Drawn for a
@@ -141,7 +96,7 @@ const sideTop = (color: string, detail: string, late: boolean): string => {
   return `<g transform="translate(4,0)">
 <rect x="0" y="0" width="54" height="3000" fill="url(#gridU)" opacity=".22"/>
 <path d="M7.5 0V3000" stroke="${color}" stroke-width=".8" opacity=".4"/>
-<rect x="6" y="-50" width="3" height="40" fill="${color}"><animate attributeName="y" from="-50" to="1200" dur="${late ? '7.5s' : '6s'}" repeatCount="indefinite"/></rect>
+<rect class="drop${b}" x="6" y="-50" width="3" height="40" fill="${color}"/>
 ${corner(color, false, late)}
 <g clip-path="url(#barsTop)" opacity=".9"><g class="march${b}">${bars(16, 76, 9, detail)}</g></g>
 ${lights(17, 170, color)}
@@ -160,12 +115,12 @@ ${corner(color, true, !late)}
 </g>`
 }
 
-// Where each corner of the frame hangs: the window edge it is measured from,
-// then the panel it clears, then the art-unit scale (mirrored on the right).
-const LEFT = `translate(${SIDEBAR_PX},0)`
-const RIGHT = `translate(${-RIGHT_PANEL_PX},0)`
-const leftArt = `${LEFT} scale(${UNIT})`
-const rightArt = `${RIGHT} scale(${-UNIT},${UNIT})`
+// Where each side of the frame hangs, at the art-unit scale (mirrored on the
+// right), for its top and its bottom.
+const leftTop = `translate(${LEFT_X},0) scale(${UNIT})`
+const leftBottom = `translate(${LEFT_X},${H}) scale(${UNIT})`
+const rightTop = `translate(${RIGHT_X},0) scale(${-UNIT},${UNIT})`
+const rightBottom = `translate(${RIGHT_X},${H}) scale(${-UNIT},${UNIT})`
 
 // What moves: a light runs along each bracket and drops down each rail, the
 // hazard bars march, the small lights blink in turn, a pointer slides along
@@ -178,8 +133,13 @@ const rightArt = `${RIGHT} scale(${-UNIT},${UNIT})`
 // ghosts, the dropping lights) rests invisible or off-screen and is shown by
 // its animation, so the still drawing the app keeps underneath is a clean
 // frame.
-const SCENE = `<svg xmlns="http://www.w3.org/2000/svg">
+const SCENE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
 <style>
+.drop{animation:drop 6s linear infinite}
+.drop.b{animation-duration:7.5s}
+@keyframes drop{from{transform:translateY(0)}to{transform:translateY(1250px)}}
+.scan{animation:scan 12s linear infinite}
+@keyframes scan{from{transform:translateY(-10px)}to{transform:translateY(${H + 160}px)}}
 .jolt{animation:jolt 50s steps(1,end) infinite}
 @keyframes jolt{0%,100%{transform:translate(0,0)}62%{transform:translate(-9px,0)}62.216%{transform:translate(7px,1px)}62.432%{transform:translate(-4px,0)}62.648%{transform:translate(0,0)}}
 .tear{opacity:0;animation:tearA 50s steps(1,end) infinite}
@@ -211,7 +171,7 @@ const SCENE = `<svg xmlns="http://www.w3.org/2000/svg">
 .breathe{animation:breathe 7s ease-in-out infinite}
 .breathe.b{animation-duration:9s}
 @keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.run,.ghost,.tear,.flash{display:none}.march,.seek,.pulse,.wedge,.breathe,.jolt{animation:none}}
+@media (prefers-reduced-motion:reduce){.run,.ghost,.tear,.flash,.drop,.scan{display:none}.march,.seek,.pulse,.wedge,.breathe,.jolt{animation:none}}
 </style>
 <defs>
 <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="${CYAN}" stroke-width="1"/></pattern>
@@ -223,57 +183,46 @@ const SCENE = `<svg xmlns="http://www.w3.org/2000/svg">
 <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${CYAN}" stop-opacity="0"/><stop offset="1" stop-color="${CYAN}" stop-opacity=".1"/></linearGradient>
 <clipPath id="barsTop"><rect x="16" y="78" width="11" height="68"/></clipPath>
 </defs>
-<rect width="100%" height="100%" fill="#07080d"/>
-<rect width="100%" height="100%" fill="url(#grid)" opacity=".07"/>
-<g transform="${LEFT}"><circle r="400" fill="url(#glowM)"/></g>
-<svg y="100%" overflow="visible"><g transform="${LEFT}"><circle class="breathe b" r="630" fill="url(#glowR)"/></g></svg>
-<svg x="100%" overflow="visible"><g transform="${RIGHT}"><circle class="breathe" r="630" fill="url(#glowY)"/></g></svg>
-<svg x="100%" y="100%" overflow="visible"><g transform="${RIGHT}"><circle r="480" fill="url(#glowC)"/></g></svg>
-<svg y="-16%" width="100%" height="152" overflow="visible"><animate attributeName="y" from="-16%" to="102%" dur="12s" repeatCount="indefinite"/><rect width="100%" height="150" fill="url(#beam)"/><rect y="150" width="100%" height="1.6" fill="${CYAN}" opacity=".4"/></svg>
+<rect width="${W}" height="${H}" fill="#07080d"/>
+<rect width="${W}" height="${H}" fill="url(#grid)" opacity=".07"/>
+<circle cx="${LEFT_X}" cy="0" r="400" fill="url(#glowM)"/>
+<circle class="breathe b" cx="${LEFT_X}" cy="${H}" r="630" fill="url(#glowR)"/>
+<circle class="breathe" cx="${RIGHT_X}" cy="0" r="630" fill="url(#glowY)"/>
+<circle cx="${RIGHT_X}" cy="${H}" r="480" fill="url(#glowC)"/>
+<g class="scan"><rect y="-150" width="${W}" height="150" fill="url(#beam)"/><rect y="0" width="${W}" height="1.6" fill="${CYAN}" opacity=".4"/></g>
 <g class="jolt">
-<g transform="${leftArt}">${sideTop(RED, MAGENTA, false)}</g>
-<svg y="100%" overflow="visible"><g transform="${leftArt}">${sideBottom(RED, false)}</g></svg>
-<svg x="100%" overflow="visible"><g transform="${rightArt}">${sideTop(YELLOW, YELLOW, true)}</g></svg>
-<svg x="100%" y="100%" overflow="visible"><g transform="${rightArt}">${sideBottom(YELLOW, true)}</g></svg>
+<g transform="${leftTop}">${sideTop(RED, MAGENTA, false)}</g>
+<g transform="${leftBottom}">${sideBottom(RED, false)}</g>
+<g transform="${rightTop}">${sideTop(YELLOW, YELLOW, true)}</g>
+<g transform="${rightBottom}">${sideBottom(YELLOW, true)}</g>
 </g>
-<rect class="flash" width="100%" height="100%" fill="${CYAN}"/>
-<rect class="tear" x="0" y="12%" width="100%" height="22" fill="${CYAN}"/>
-<rect class="tear b" x="26%" y="27%" width="74%" height="7" fill="${RED}"/>
-<rect class="tear c" x="0" y="43%" width="62%" height="30" fill="${CYAN}"/>
-<rect class="tear" x="14%" y="61%" width="86%" height="9" fill="${YELLOW}"/>
-<rect class="tear b" x="0" y="77%" width="100%" height="15" fill="${MAGENTA}"/>
-<rect class="tear c" x="38%" y="90%" width="62%" height="6" fill="${CYAN}"/>
+<rect class="flash" width="${W}" height="${H}" fill="${CYAN}"/>
+<rect class="tear" x="0" y="${0.12 * H}" width="${W}" height="22" fill="${CYAN}"/>
+<rect class="tear b" x="${0.26 * W}" y="${0.27 * H}" width="${0.74 * W}" height="7" fill="${RED}"/>
+<rect class="tear c" x="0" y="${0.43 * H}" width="${0.62 * W}" height="30" fill="${CYAN}"/>
+<rect class="tear" x="${0.14 * W}" y="${0.61 * H}" width="${0.86 * W}" height="9" fill="${YELLOW}"/>
+<rect class="tear b" x="0" y="${0.77 * H}" width="${W}" height="15" fill="${MAGENTA}"/>
+<rect class="tear c" x="${0.38 * W}" y="${0.9 * H}" width="${0.62 * W}" height="6" fill="${CYAN}"/>
 </svg>`
 
-const LOOK: ThemeSetArgs = {
-  colors: theme,
-  // A light navy frost: the frame and its motion still show through a panel
-  // that lets the backdrop through, and the words over it keep their contrast.
-  backdrop: { scene: SCENE_NAME, glass: { blur: 5, tint: '#0a0f1c', opacity: 0.6 } },
-}
+// The scene's name goes under two names, as Anthropic's theme-examples does:
+// Claude Code 2.1.330 and later read `scene`, earlier builds read `id` (and
+// refuse a backdrop without it). Each build drops the member it doesn't know.
+// A light navy frost keeps the words over the frame readable.
+const LOOK = {
+  backdrop: { scene: SCENE_NAME, id: SCENE_NAME, glass: { blur: 5, tint: '#0a0f1c', opacity: 0.6 } },
+} as unknown as ThemeSetArgs
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    // The one kind of problem that stops Desktop painting the colors at all.
-    const unpainted = problems.find(line => line.startsWith("Desktop won't paint"))
-
-    if (unpainted !== undefined) {
-      $.ui.toast(unpainted)
-    }
-    // Claude Code 2.1.321 and 2.1.322 throw on any backdrop ("id is 1 to 64 of
-    // letters, digits, _ or - (host check)"), which threw away the colors too.
-    // On a throw, set the colors alone so those builds still get the palette.
-    let set: ThemeResult
-
     try {
-      set = await $.theme.set(LOOK)
-    } catch (err) {
-      set = await $.theme.set({ colors: LOOK.colors })
-      $.ui.log(`Night Circuit: backdrop refused (${err instanceof Error ? err.message : String(err)}); colors only.`)
-    }
+      const set = await $.theme.set(LOOK)
 
-    if (!set.isDrawn) {
-      $.ui.status(set.reason)
+      if (!set.isDrawn) {
+        $.ui.status(set.reason)
+      }
+    } catch (err) {
+      $.ui.log(`Night Circuit: the backdrop was refused (${err instanceof Error ? err.message : String(err)}).`)
     }
 
     return next(e)

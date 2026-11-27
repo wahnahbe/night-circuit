@@ -1,7 +1,7 @@
 {
   "name": "night-circuit",
-  "version": "1.1.0",
-  "description": "A neon night-city look: near-black panels, hazard-yellow accent, cyan and red signal colors, and a slow HUD backdrop.",
+  "version": "1.2.0",
+  "description": "A neon night-city HUD frame behind the chat in the Claude desktop app: red and yellow rails, corner brackets, running lights and a slow scan line.",
   "author": { "name": "wahnahbe" },
   "license": "MIT",
   "repository": "https://github.com/wahnahbe/night-circuit"
